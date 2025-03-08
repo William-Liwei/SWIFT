@@ -3,18 +3,18 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import math
-import pywt
 
 
 class SelectiveTemporalStateSpace(nn.Module):
     """
     Selective Temporal State Space (STSS) 模块
-    扩展了Mamba与时间序列特定的门控机制
+    扩展Mamba模型用于时间序列特定的选择性状态空间建模
     """
-    def __init__(self, d_model, seq_len, dropout=0.1):
+    def __init__(self, d_model, seq_len, dropout=0.1, temporal_window=3):
         super(SelectiveTemporalStateSpace, self).__init__()
         self.d_model = d_model
         self.seq_len = seq_len
+        self.temporal_window = temporal_window
         
         # 层归一化
         self.layer_norm = nn.LayerNorm(d_model)
@@ -26,8 +26,8 @@ class SelectiveTemporalStateSpace(nn.Module):
         self.temporal_conv = nn.Conv1d(
             d_model, 
             d_model, 
-            kernel_size=3, 
-            padding=1,
+            kernel_size=temporal_window, 
+            padding=temporal_window//2,
             groups=d_model  # 深度可分离卷积
         )
         
@@ -78,9 +78,10 @@ class SelectiveTemporalStateSpace(nn.Module):
         # 初始化隐藏状态
         h = torch.zeros(batch_size, hidden_dim, device=device)
         
-        # 离散化 SSM A 矩阵
+        # 离散化 SSM A 矩阵 - 修复维度不匹配问题
         time_scale = torch.exp(self.time_scale)  # [D]
-        A = torch.exp(-delta_gated * time_scale.unsqueeze(1))  # [B, L, D]
+        # 使用view来正确广播维度
+        A = torch.exp(-delta_gated * time_scale.view(1, 1, -1))  # [B, L, D]
         
         outputs = []
         
@@ -113,7 +114,7 @@ class SelectiveTemporalStateSpace(nn.Module):
 class MultiScaleDilatedConv(nn.Module):
     """
     Multi-Scale Dilated Convolutional Network (MSDCN)
-    采用并行膨胀卷积与自适应感受野
+    采用并行膨胀卷积与自适应感受野，模拟小波分解
     """
     def __init__(self, d_model, num_scales=4, dropout=0.1):
         super(MultiScaleDilatedConv, self).__init__()
@@ -132,9 +133,9 @@ class MultiScaleDilatedConv(nn.Module):
         # 尺度权重 - 自适应加权
         self.scale_weights = nn.Parameter(torch.ones(num_scales) / num_scales)
         
-        # 尺度特定的注意力
+        # 尺度特定的注意力 - 修复维度问题
+        self.avg_pool = nn.AdaptiveAvgPool1d(1)
         self.scale_attention = nn.Sequential(
-            nn.AdaptiveAvgPool1d(1),
             nn.Linear(d_model, d_model * num_scales),
             nn.Sigmoid()
         )
@@ -147,7 +148,8 @@ class MultiScaleDilatedConv(nn.Module):
             x (torch.Tensor): 输入序列，形状为 [B, L, D]
             
         Returns:
-            torch.Tensor: 处理后的序列
+            torch.Tensor: 处理后的序列，形状同输入
+            torch.Tensor: 小波能量，用于DSS模块，形状为 [B, num_scales]
         """
         # 保存输入用于残差连接
         residual = x
@@ -157,16 +159,27 @@ class MultiScaleDilatedConv(nn.Module):
         
         # 执行小波变换模拟 - 这里使用膨胀卷积模拟
         multi_scale_features = []
+        wavelet_energies = []
+        
         for i, conv in enumerate(self.wavelet_decomp):
             # 应用膨胀卷积
             scale_feature = conv(x_conv)  # [B, D, L]
             multi_scale_features.append(scale_feature)
+            
+            # 计算小波能量 - 每个尺度的平均平方振幅
+            energy = torch.mean(scale_feature**2, dim=(1, 2))  # [B]
+            wavelet_energies.append(energy)
         
-        # 计算动态尺度权重
-        x_pool = x_conv.mean(dim=2, keepdim=True)  # [B, D, 1]
-        scale_attn = self.scale_attention(x_conv)  # [B, D*num_scales, 1]
-        scale_attn = scale_attn.view(x.size(0), self.d_model, self.num_scales, 1)  # [B, D, S, 1]
-        scale_attn = scale_attn.mean(dim=1)  # [B, S, 1]
+        # 堆叠小波能量
+        wavelet_energies = torch.stack(wavelet_energies, dim=1)  # [B, num_scales]
+        
+        # 计算动态尺度权重 - 修复的部分
+        pooled = self.avg_pool(x_conv)  # [B, D, 1]
+        pooled = pooled.squeeze(-1)  # [B, D]
+        scale_attn = self.scale_attention(pooled)  # [B, D*num_scales]
+        scale_attn = scale_attn.view(x.size(0), self.d_model, self.num_scales)  # [B, D, S]
+        scale_attn = scale_attn.mean(dim=1, keepdim=True)  # [B, 1, S]
+        scale_attn = scale_attn.transpose(1, 2)  # [B, S, 1]
         
         # 计算尺度特定权重
         softmax_weights = F.softmax(self.scale_weights, dim=0)
@@ -183,13 +196,13 @@ class MultiScaleDilatedConv(nn.Module):
         # 残差连接
         output = residual + self.dropout(output)
         
-        return output
-
+        # 返回输出特征和小波能量
+        return output, wavelet_energies
 
 class FeatureInteractionBridge(nn.Module):
     """
     Feature Interaction Bridge (FIB)
-    促进跨路径信息交换
+    促进STSS和MSDCN路径之间的跨路径信息交换
     """
     def __init__(self, d_model, dropout=0.1):
         super(FeatureInteractionBridge, self).__init__()
@@ -272,8 +285,9 @@ class DynamicScaleSelection(nn.Module):
     Dynamic Scale Selection (DSS)
     基于预测范围的自适应时间尺度权重
     """
-    def __init__(self, pred_len, num_scales=4):
+    def __init__(self, d_model, pred_len, num_scales=4):
         super(DynamicScaleSelection, self).__init__()
+        self.d_model = d_model
         self.pred_len = pred_len
         self.num_scales = num_scales
         
@@ -305,7 +319,7 @@ class DynamicScaleSelection(nn.Module):
         batch_size = h_s.shape[0]
         
         # 计算尺度权重 - 使用Sigmoid函数
-        # 我们计算每个尺度的权重，基于1/((1 + exp(-(pred_len - beta) / alpha))) 公式
+        # 预测长度越大，低频成分权重越高；预测长度越小，高频成分权重越高
         pred_len_tensor = torch.full((batch_size, 1), self.pred_len, 
                                      device=h_s.device)
         

@@ -11,7 +11,6 @@ import ptwt
 import numpy as np
 
 # 导入SWIFT模块接口
-# 目前团队正在为SWIFT各个模块申请知识产权保护，故暂时不予完全开源，仅为简化版本实现
 from swiftmodule.swift_modules import SelectiveTemporalStateSpace, MultiScaleDilatedConv, FeatureInteractionBridge, DynamicScaleSelection
 
 try:
@@ -215,7 +214,7 @@ class Wavelet(nn.Module):
             h_s, h_c = self.fib(h_s, h_c)
             
             # 获取小波能量用于动态尺度选择
-            dummy_wavelet_energies = torch.ones(B, 4, device=x.device)  # 占位符
+            dummy_wavelet_energies = torch.ones(B, 4, device=x.device)
             res = self.dss(dummy_wavelet_energies, h_s, h_c)
         
         # 修改：插入 FECAM 模块

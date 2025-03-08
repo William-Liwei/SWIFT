@@ -1,6 +1,6 @@
 import os
 import torch
-from models import Wavelet
+from models import Wavelet, Swift
 
 
 class Exp_Basic(object):
@@ -8,7 +8,7 @@ class Exp_Basic(object):
         self.args = args
         self.model_dict = {
             'Wavelet': Wavelet,
-            'SWIFT-1-simplified': Wavelet,
+            'SWIFT-1-simplified': Swift,
         }
         self.device = self._acquire_device()
         self.model = self._build_model().to(self.device)
