@@ -68,7 +68,7 @@ if __name__ == '__main__':
     parser.add_argument("--ms_wave", action='store_true', help='whether to use multiscale wavelet')
     parser.add_argument('--valiornot', type=bool, default=True, help='use vali or not')
     parser.add_argument('--threshold', type=float, default=2.0, help='threshold for mask')
-    parser.add_argument('--use_swift', action='store_true', help='whether to use SWIFT modules', default=False)
+    parser.add_argument('--use_swift', action='store_true', help='whether to use SWIFT modules', default=True)
     parser.add_argument('--period_coeff', type=float, default=0.5, help='coefficient for period in Wavelet module')
     parser.add_argument('--num_scales', type=int, default=4, help='number of scales for Multi-Scale Dilated Conv')
     parser.add_argument('--fib_dropout', type=float, default=0.1, help='dropout rate for Feature Interaction Bridge')
