@@ -71,6 +71,8 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 pred = outputs.detach().cpu()
                 true = batch_y.detach().cpu()
                 mask = torch.abs(pred - true) < self.args.threshold
+                if self.args.model != "SWIFT-1-simplified":
+                    mask = torch.ones_like(mask, dtype=torch.bool)
                 pred = torch.where(mask, pred, true)
                 true = torch.where(mask, true, pred)
 
@@ -228,6 +230,8 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
                 error = torch.abs(outputs - batch_y)
                 mask = error < self.args.threshold
+                if self.args.model != "SWIFT-1-simplified":
+                    mask = torch.ones_like(mask, dtype=torch.bool)
                 outputs_filtered = torch.where(mask, outputs, batch_y) 
                 batch_y_filtered = torch.where(mask, batch_y, outputs)
 
