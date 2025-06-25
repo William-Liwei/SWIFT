@@ -1,12 +1,12 @@
 # SWIFT: State-space Wavelet Integrated Forecasting Technology for Enhanced Time Series Prediction
 
-
 This is an official implementation of [SWIFT: State-space Wavelet Integrated Forecasting Technology for Enhanced Time Series Prediction].
 
-## Authors
+![license](https://img.shields.io/badge/License-Apache_2.0-blue.svg) [![Issues](https://badgen.net/github/issues/William-Liwei/SWIFT?color=red)](https://github.com/William-Liwei/SWIFT/issues) [![PRs](https://badgen.net/github/prs/William-Liwei/SWIFT?color=yellow)](https://github.com/William-Liwei/SWIFT/pulls) ![GitHub repo size](https://img.shields.io/github/repo-size/william-liwei/SWIFT?color=green) ![GitHub Repo stars](https://badgen.net/github/stars/William-Liwei/SWIFT?color=orange) ![GitHub forks](https://badgen.net/github/forks/William-Liwei/SWIFT?color=pink)
+
+## Author(s)
 
 Wei Li, Shanghai University;
-Zixin Wang, Shanghai University;
 
 
 ## Prerequisites
@@ -19,23 +19,21 @@ pip install -r requirements.txt
 
 ## Data set preparation
 
-Limited by the storage space of github repo, some data sets may need to be downloaded by yourself, but some small data sets may have been put in the repo for demonstration. If you have any questions, please contact me by email.
+Due to the storage space limitations of GitHub, some data sets may need to be downloaded separately. However, some small data sets have been included in the repository for demonstration purposes. If you encounter any issues with the data sets, please contact us via email.
 
-<!-- 
 ## Citation
 
 If you find this repo useful, please cite it as follows:
 
 ```
-@article{li2025swift,
+@inproceedings{li2025swift,
   title={SWIFT: State-space Wavelet Integrated Forecasting Technology for Enhanced Time Series Prediction},
-  author={Li, Wei and Wang, Zixin},
-  journal={},
-  year={2025}
+  author={Li, Wei},
+  booktitle={International Conference on Artificial Neural Networks},
+  year={2025},
+  note={to be published}
 }
-``` 
--->
-
+```
 ## Contact
 
 If you have any questions, please contact <liwei008009@163.com> or submit an issue. 
@@ -44,8 +42,20 @@ This repo model is a simplified model and is allowed for commercial use, but ple
 
 ## Acknowledgement
 
-We appreciate the following repo for their code and dataset:
+We extend our gratitude to the following repositories for their valuable code and datasets:
 - https://github.com/thuml/Time-Series-Library
 - https://github.com/thuml/Autoformer
 - https://github.com/Hank0626/WFTNet
-- https://github.com/William-Liwei/FreqHybrid
+- https://github.com/William-Liwei/EnergyPatchTST
+
+## Star History
+
+<a href="https://www.star-history.com/#William-Liwei/SWIFT&Date">
+
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=William-Liwei/SWIFT&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=William-Liwei/SWIFT&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=William-Liwei/SWIFT&type=Date" />
+ </picture>
+
+</a>
